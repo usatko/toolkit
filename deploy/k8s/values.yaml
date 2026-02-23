@@ -1,0 +1,38 @@
+sharelatex:
+  image: "sharelatex/sharelatex:latest"
+  env:
+    OVERLEAF_APP_NAME: "Overleaf Community"
+    OVERLEAF_MONGO_URL: "mongodb://overleaf-mongo:27017/sharelatex?replicaSet=overleaf" # <-- UPDATED
+    OVERLEAF_REDIS_HOST: "overleaf-redis"
+    OVERLEAF_REDIS_PORT: "6379"
+  persistence:
+    enabled: true
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  service:           # <-- Make sure this block exists
+    type: ClusterIP  # <-- and is indented correctly
+    port: 80
+
+mongo:
+  image: "mongo:8.0"
+  persistence:
+    size: 5Gi
+
+redis:
+  image: "redis:6.2"
+  persistence:
+    size: 2Gi
+
+
+ingress:
+  enabled: true
+  className: "nginx" # Change this if you use Traefik, HAProxy, etc.
+  annotations: {}
+    # Example annotations for cert-manager SSL:
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # nginx.ingress.kubernetes.io/proxy-body-size: "50m" # Helpful for large LaTeX uploads
+  hosts:
+    - host: overleaf.lab.onyxia-test.medius.si # Replace with your actual domain
+      paths:
+        - path: /
+          pathType: Prefix
