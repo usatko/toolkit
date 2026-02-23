@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: overleaf-mongo
+  labels:
+    app: overleaf-mongo
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  selector:
+    app: overleaf-mongo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: overleaf-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: overleaf-mongo
+  template:
+    metadata:
+      labels:
+        app: overleaf-mongo
+    spec:
+      containers:
+        - name: mongo
+          image: {{ .Values.mongo.image | default "mongo:8.0" | quote }}
+          command:
+            - "mongod"
+            - "--replSet"
+            - "overleaf"
+            - "--bind_ip_all"
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - "sh"
+                  - "-c"
+                  - |
+                    # Wait for Mongo to be ready, then initiate the replica set
+                    until mongosh --eval "print(\"waiting\")"; do sleep 2; done
+                    mongosh --eval "rs.initiate({_id: 'overleaf', members: [{_id: 0, host: 'overleaf-mongo:27017'}]})" || true
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+      volumes:
+        - name: mongo-data
+          {{- if .Values.mongo.persistence.enabled | default true }}
+          persistentVolumeClaim:
+            claimName: overleaf-mongo-pvc
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+---
+{{- if .Values.mongo.persistence.enabled | default true }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: overleaf-mongo-pvc
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  accessModes:
+    - {{ .Values.mongo.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.mongo.persistence.size | default "5Gi" }}
+{{- end }}
