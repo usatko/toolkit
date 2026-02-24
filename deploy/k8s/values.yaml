@@ -1,10 +1,17 @@
 sharelatex:
-  image:  "ghcr.io/usatko/toolkit:sha-974f159"
+  image:  "ghcr.io/usatko/toolkit:latest"
   env:
     OVERLEAF_APP_NAME: "Overleaf Community"
     OVERLEAF_MONGO_URL: "mongodb://overleaf-mongo:27017/sharelatex?replicaSet=overleaf" # <-- UPDATED
     OVERLEAF_REDIS_HOST: "overleaf-redis"
     OVERLEAF_REDIS_PORT: "6379"
+    # --- Email Configuration ---
+    OVERLEAF_EMAIL_FROM_ADDRESS: "akvarij-ai@medius.si"
+
+    OVERLEAF_EMAIL_REPLY_TO: "akvarij-ai@medius.si"
+    OVERLEAF_EMAIL_SMTP_HOST: "in-v3.mailjet.com"
+    OVERLEAF_EMAIL_SMTP_PORT: "587"
+    OVERLEAF_EMAIL_SMTP_SECURE: "false"
   persistence:
     enabled: true
     size: 10Gi

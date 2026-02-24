@@ -34,6 +34,21 @@ spec:
           ports:
             - containerPort: 80
           env:
+            - name: OVERLEAF_SITE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: overleaf-site-url
+                  key: site-url
+            - name: OVERLEAF_EMAIL_SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: overleaf-smtp-secret
+                  key: smtp-pass
+            - name: OVERLEAF_EMAIL_SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: overleaf-smtp-user
+                  key: smtp-user
             {{- range $key, $value := .Values.sharelatex.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
