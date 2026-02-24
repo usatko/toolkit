@@ -1,5 +1,5 @@
 sharelatex:
-  image: "sharelatex/sharelatex:latest"
+  image:  "ghcr.io/usatko/toolkit:sha-974f159"
   env:
     OVERLEAF_APP_NAME: "Overleaf Community"
     OVERLEAF_MONGO_URL: "mongodb://overleaf-mongo:27017/sharelatex?replicaSet=overleaf" # <-- UPDATED
