@@ -17,6 +17,7 @@ RUN tlmgr install \
     pgf-pie \
     pdflscape \
     smartdiagram \
+    xstring \
     multirow \
     shipunov \
     appendix \
