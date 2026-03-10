@@ -34,10 +34,8 @@ redis:
 ingress:
   enabled: true
   className: "nginx" # Change this if you use Traefik, HAProxy, etc.
-  annotations: {}
-    # Example annotations for cert-manager SSL:
-    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    # nginx.ingress.kubernetes.io/proxy-body-size: "50m" # Helpful for large LaTeX uploads
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m" # Satisfies 10MB requirement
   hosts:
     - host: overleaf.lab.onyxia-test.medius.si # Replace with your actual domain
       paths:
