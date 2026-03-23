@@ -31,6 +31,7 @@ spec:
         - name: sharelatex
           # Use default values so it doesn't crash if ArgoCD misses the values.yaml
           image: {{ default "sharelatex/sharelatex" .Values.sharelatex.image}}
+          imagePullPolicy: {{ default "IfNotPresent" .Values.sharelatex.pullPolicy}}
           ports:
             - containerPort: 80
           env:

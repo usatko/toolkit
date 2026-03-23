@@ -1,10 +1,11 @@
 FROM sharelatex/sharelatex:latest
 
-# 1. Update the TeX Live Manager itself
-RUN tlmgr update --self
+# 1. Point tlmgr to the frozen 2025 historic repository using an HTTPS mirror
+RUN tlmgr option repository https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final
 
+# (Note: We removed 'RUN tlmgr update --self' because a frozen repo has no updates)
 
-# 2. Install all the specific packages requested in report.tex and report-sl.tex
+# 2. Install all the specific packages requested, including pdfcomment
 RUN tlmgr install \
     ucs \
     tabulary \
@@ -28,5 +29,6 @@ RUN tlmgr install \
     babel-english \
     babel-slovenian \
     hyphen-slovenian \
-    # 3. Rebuild the TeX file database so the compiler sees the new packages
+    pdfcomment \
+    # 3. Rebuild the TeX file database
     && texhash
