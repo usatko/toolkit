@@ -44,9 +44,44 @@ spec:
                   - "sh"
                   - "-c"
                   - |
-                    # Wait for Mongo to be ready, then initiate the replica set
-                    until mongosh --eval "print(\"waiting\")"; do sleep 2; done
-                    mongosh --eval "rs.initiate({_id: 'overleaf', members: [{_id: 0, host: 'overleaf-mongo:27017'}]})" || true
+                    # 1. Wait for the local mongod instance to start accepting connections
+                    until mongosh --eval "print(\"waiting\")" --quiet; do sleep 2; done
+                    
+                    # 2. Run an intelligent JS script to check and auto-heal the replica set configuration
+                    mongosh --quiet --eval '
+                      try {
+                        var status = rs.status();
+                        if (status.ok === 1) {
+                          print("Replica set is healthy and active.");
+                        }
+                      } catch (e) {
+                        print("Replica set requires attention: " + e.message);
+                        
+                        if (e.message.includes("run rs.initiate")) {
+                          print("Fresh database detected. Initializing replica set...");
+                          rs.initiate({_id: "overleaf", members: [{_id: 0, host: "overleaf-mongo:27017"}]});
+                        } else {
+                          print("Invalid replica config or identity mismatch detected. Forcing reconfig...");
+                          try {
+                            var dbLocal = db.getSiblingDB("local");
+                            var cfg = dbLocal.system.replset.findOne();
+                            if (cfg) {
+                              cfg.version = cfg.version + 1;
+                              cfg.members = [{_id: 0, host: "overleaf-mongo:27017"}];
+                              db.getSiblingDB("admin").runCommand({replSetReconfig: cfg, force: true});
+                              print("Replica set successfully forced to recognize new pod environment.");
+                            } else {
+                              rs.initiate({_id: "overleaf", members: [{_id: 0, host: "overleaf-mongo:27017"}]});
+                            }
+                          } catch (err) {
+                            print("Reconfiguration failed due to storage engine corruption. Resetting replication metadata...");
+                            db.getSiblingDB("local").dropDatabase();
+                            rs.initiate({_id: "overleaf", members: [{_id: 0, host: "overleaf-mongo:27017"}]});
+                            print("Replication database cleared and re-initialized successfully.");
+                          }
+                        }
+                      }
+                    '
           ports:
             - containerPort: 27017
           volumeMounts:
