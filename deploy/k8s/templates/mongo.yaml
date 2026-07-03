@@ -20,6 +20,8 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
   name: overleaf-mongo
 spec:
+  strategy: 
+    type: Recreate
   replicas: 1
   selector:
     matchLabels:
