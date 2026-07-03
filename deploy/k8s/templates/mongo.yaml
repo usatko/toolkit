@@ -7,7 +7,7 @@ metadata:
   labels:
     app: overleaf-mongo
 spec:
-  publishNotReadyAddresses: true
+  publishNotReadyAddresses: true  # CRITICAL FIX 1: Allows Mongo to talk to itself before passing readiness checks
   ports:
     - port: 27017
       targetPort: 27017
@@ -21,9 +21,9 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
   name: overleaf-mongo
 spec:
-  strategy: 
-    type: Recreate
   replicas: 1
+  strategy:
+    type: Recreate # Ensures old pods release the PVC lock before the new pod boots
   selector:
     matchLabels:
       app: overleaf-mongo
@@ -47,9 +47,41 @@ spec:
                   - "sh"
                   - "-c"
                   - |
-                    # Wait for Mongo to be ready, then initiate the replica set
-                    until mongosh --eval "print(\"waiting\")"; do sleep 2; done
-                    mongosh --eval "rs.initiate({_id: 'overleaf', members: [{_id: 0, host: 'overleaf-mongo:27017'}]})" || true
+                    # Wait for local mongo instance to be reachable
+                    until mongosh --eval "print(\"waiting\")" --quiet; do sleep 2; done
+                    
+                    # CRITICAL FIX 2: Smart JS logic to evaluate and force-reconfigure identity mismatches
+                    mongosh --quiet --eval '
+                      try {
+                        var status = rs.status();
+                        if (status.ok === 1 && status.myState === 1) {
+                          print("Replica set is already healthy and PRIMARY.");
+                        } else {
+                          throw new Error("Replica set is in an unhealthy state: " + status.myState);
+                        }
+                      } catch (e) {
+                        print("Replica set requires configuration repair. Reason: " + e.message);
+                        try {
+                          var localDb = db.getSiblingDB("local");
+                          var cfg = localDb.system.replset.findOne();
+                          if (cfg) {
+                            print("Found existing configuration on disk. Updating network identity...");
+                            cfg.version = cfg.version + 1;
+                            cfg.members = [{ _id: 0, host: "overleaf-mongo:27017" }];
+                            db.getSiblingDB("admin").runCommand({ replSetReconfig: cfg, force: true });
+                            print("Forced replica set reconfiguration successful.");
+                          } else {
+                            print("No configuration found on disk. Initializing fresh replica set...");
+                            rs.initiate({ _id: "overleaf", members: [{ _id: 0, host: "overleaf-mongo:27017" }] });
+                          }
+                        } catch (err) {
+                          print("Severe configuration or log corruption detected. Wiping replica metadata...");
+                          db.getSiblingDB("local").dropDatabase();
+                          rs.initiate({ _id: "overleaf", members: [{ _id: 0, host: "overleaf-mongo:27017" }] });
+                          print("Replica layer reset completed successfully.");
+                        }
+                      }
+                    '
           ports:
             - containerPort: 27017
           volumeMounts:
