@@ -37,5 +37,6 @@ RUN tlmgr install \
     pdfcomment \
     bigfoot \
     acronym \
+    pgfgantt \
     # 3. Rebuild the TeX file database
     && texhash
