@@ -1,5 +1,5 @@
 sharelatex:
-  image:  "ghcr.io/usatko/toolkit:latest"
+  image:  "ghcr.io/usatko/toolkit:sha-2ca0a1a"
   pullPolicy: Always
   env:
     OVERLEAF_APP_NAME: "Overleaf Community"
